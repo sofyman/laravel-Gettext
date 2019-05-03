@@ -40,7 +40,7 @@ class Gettext
         $this->config = $config;
     }
 
-    private function getFile($locale)
+    public function getFile($locale)
     {
         return sprintf('%s/%s/LC_MESSAGES/%s.', $this->config['storage'], $locale, $this->config['domain']);
     }
@@ -54,27 +54,12 @@ class Gettext
         return false;
     }
 
-    private function store($locale, $entries)
-    {
-        $file = $this->getFile($locale);
-        $dir = dirname($file);
-
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
-
-        Generators\Mo::toFile($entries, $file.'mo');
-        Generators\Po::toFile($entries, $file.'po');
-        Generators\PhpArray::toFile($entries, $file.'php');
-
-        return $entries;
-    }
-
     private function scan()
     {
         Extractors\PhpCode::$functions += [
             '__' => '__',
             '_' => '__',
+            'ht__' => '__',
         ];
 
         $entries = new Translations();
@@ -84,12 +69,20 @@ class Gettext
                 throw new Exception(__('Folder %s not exists. Gettext scan aborted.', $dir));
             }
 
-            foreach ($this->scanDir($dir) as $file) {
-                if (strstr($file, '.blade.php')) {
-                    $entries->mergeWith(Extractors\Blade::fromFile($file));
-                } elseif (strstr($file, '.php')) {
-                    $entries->mergeWith(Extractors\PhpCode::fromFile($file));
+            try {
+                foreach ($this->scanDir($dir) as $file) {
+                    if (strstr($file, '.blade.php')) {
+                        $entries->mergeWith(Extractors\Blade::fromFile($file));
+                    } elseif (strstr($file, '.php')) {
+                        $entries->mergeWith(Extractors\PhpCode::fromFile($file));
+                    } elseif (strstr($file, '.js')) {
+                        $entries->mergeWith(Extractors\JsCode::fromFile($file));
+                    } elseif (strstr($file, '.vue')) {
+                        $entries->mergeWith(Extractors\JsCode::fromFile($file));
+                    }
                 }
+            } catch (Exception $e) {
+                // Ignore.
             }
         }
 
@@ -114,40 +107,33 @@ class Gettext
         return $files;
     }
 
-    public function getEntries($locale, $refresh = true)
+    public function getEntries($locale, $scan = false)
     {
-        if (empty($refresh) && ($cache = $this->getCache($locale))) {
+        $cache = $this->getCache($locale);
+        if (!$scan) {
             return $cache;
         }
 
         $entries = clone $this->scan();
 
-        if (is_file($file = $this->getFile($locale).'mo')) {
-            $entries->mergeWith(Extractors\Mo::fromFile($file));
+        if (is_file($file = $this->getFile($locale).'po')) {
+            $entries->mergeWith($cache);
         }
 
         return $entries;
     }
 
-    public function setEntries($locale, $translations)
+    public function putEntries($locale, $entries)
     {
-        if (empty($translations)) {
-            return true;
+        $file = $this->getFile($locale);
+        $dir = dirname($file);
+
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
         }
 
-        $entries = $this->getCache($locale) ?: (new Translations());
-
-        foreach ($translations as $msgid => $msgstr) {
-            $msgid = urldecode($msgid);
-
-            if (!($entry = $entries->find(null, $msgid))) {
-                $entry = $entries->insert(null, $msgid);
-            }
-
-            $entry->setTranslation($msgstr);
-        }
-
-        $this->store($locale, $entries);
+        Generators\Po::toFile($entries, $file.'po');
+        Generators\JsonDictionary::toFile($entries, $file.'json');
 
         return $entries;
     }
