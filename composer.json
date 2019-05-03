@@ -1,5 +1,5 @@
 {
-    "name": "eusonlito/laravel-gettext",
+    "name": "sofyman/laravel-gettext",
     "keywords": ["laravel", "gettext"],
     "description": "Simple gettext loader and parser",
     "license": "MIT",
