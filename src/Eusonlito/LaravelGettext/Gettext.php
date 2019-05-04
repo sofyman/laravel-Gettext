@@ -45,10 +45,19 @@ class Gettext
         return sprintf('%s/%s/LC_MESSAGES/%s.', $this->config['storage'], $locale, $this->config['domain']);
     }
 
-    private function getCache($locale)
+    private function getPo($locale)
     {
         if (is_file($file = $this->getFile($locale).'po')) {
             return Extractors\Po::fromFile($file);
+        }
+
+        return false;
+    }
+
+    private function getCache($locale)
+    {
+        if (is_file($file = $this->getFile($locale).'php')) {
+            return Extractors\PhpArray::fromFile($file);
         }
 
         return false;
@@ -116,8 +125,8 @@ class Gettext
 
         $entries = clone $this->scan();
 
-        if (is_file($file = $this->getFile($locale).'po')) {
-            $entries->mergeWith($cache);
+        if (is_file($this->getFile($locale).'po')) {
+            $entries->mergeWith($this->getPo($locale));
         }
 
         return $entries;
@@ -132,6 +141,7 @@ class Gettext
             mkdir($dir, 0755, true);
         }
 
+        Generators\PhpArray::toFile($entries, $file.'php');
         Generators\Po::toFile($entries, $file.'po');
         Generators\JsonDictionary::toFile($entries, $file.'json');
 

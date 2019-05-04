@@ -36,11 +36,11 @@ class GettextServiceProvider extends ServiceProvider
         return $this->load(config('gettext'));
     }
 
-    public function load(array $config)
+    public function load($config)
     {
-	if (empty($config)) {
-		return;
-	}
+        if (empty($config)) {
+            return;
+        }
 
         $config['storage'] = base_path($config['storage']);
 
