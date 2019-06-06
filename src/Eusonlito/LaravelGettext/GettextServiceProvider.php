@@ -58,7 +58,9 @@ class GettextServiceProvider extends ServiceProvider
         $gettext->setLocale($_COOKIE[$cookie], Input::get($cookie));
         $gettext->load();
 
-        setcookie($cookie, $_COOKIE[$cookie] = $gettext->getLocale(), (time() + 3600 * 24 * 30 * 12), $path);
+        if (PHP_SAPI !== 'cli') {
+            setcookie($cookie, $_COOKIE[$cookie] = $gettext->getLocale(), (time() + 3600 * 24 * 30 * 12), $path);
+        }
 
         $this->app->singleton('gettext', function() use ($gettext) {
             return $gettext;
