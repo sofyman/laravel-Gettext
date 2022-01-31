@@ -70,6 +70,9 @@ class Gettext
             '_' => '__',
             'ht__' => '__',
         ];
+        Extractors\JsCode::$functions += [
+            '$t' => '__',
+        ];
 
         $entries = new Translations();
 
